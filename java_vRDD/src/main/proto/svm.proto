@@ -1,0 +1,166 @@
+// Copyright 2015 gRPC authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "ShadowVM.proto.types";
+option java_outer_classname = "ShadowVMProto";
+option objc_class_prefix = "HLW";
+
+package ShadowVM;
+
+// The greeting service definition.
+service Greeter {
+  // Sends a greeting
+  rpc SayHello (HelloRequest) returns (HelloReply) {}
+  rpc SayTest (TestRequest) returns (TestReply) {}
+}
+
+// The request message containing the user's name.
+message HelloRequest {
+  string name = 1;
+}
+
+message TestRequest {
+  string name = 1;
+}
+
+// The response message containing the greetings
+message HelloReply {
+  string message = 1;
+}
+
+message TestReply {
+	string message = 1;
+}
+
+enum StoType {
+  Disk   = 0;
+  HostMem = 1;
+  DeviceMem = 2;
+  SharedMem = 3;
+ }
+
+message BulkInfo {
+	StoType stotype = 1;
+	int64 count = 2;
+	int64 size = 3;
+}
+
+ enum ValType {
+    Byte    = 0;
+    Int16   = 1;
+    Int32   = 2;
+    Int64   = 3;
+    Float16 = 4;   // not used
+    Float32 = 5;
+    Float64 = 6;
+    String  = 7;
+	 Tensor  = 8;
+  }
+message ColumnInfo {
+	string   id = 1;
+	ValType  type  = 2;
+   bool     isnull = 3;
+	repeated int32 dim = 4;
+	int64 	val_size   = 5;
+}
+
+message ObjectInfo {
+	string id = 1;
+	string host = 2;
+	repeated ColumnInfo column_list = 3;
+	StoType storage = 4;
+	string  path = 5;
+}
+
+message DependencyInfo {
+	enum Type {
+		Whole = 0;
+		HashPartition = 1;
+		RangePartition = 2;
+	}
+	ObjectInfo pre_object = 1;
+	Type type = 2;
+	int32 shard_id = 3;
+}
+
+
+message OperatorInfo {
+	enum Type {
+		Source   = 0;  // 'type':'file or object', 'path':'/home/firenet/data/ or object-id'
+		Loader   = 1;  // 'col_spilter':'|', 'row_spilter':'\n'
+		Filter   = 2;  // 'predication':'$(0.0)>45 && $(0.1)==2 && udf_name($(0.2))==10'
+		Map      = 3;  // 'select':'$(0.0), $(0.1)+4, udf_name($(0.2))'
+		ReduceBy = 4;  // 'metric':'1, $(0.1)*$(0.2)','agg':'$(0)+$(1), $(0)>$(1)?$(0):$(1)', 'dim':'$(0.3),$(0.4)'
+		SortBy   = 5;  // 'key':'$(0.3), $(0.4)'
+		JoinWith = 6;  // 'lkey':'$(0.0)','rkey':'$(1.0)'
+	   Sink     = 7;
+	}
+	enum Preference {
+		CPU = 0;
+		GPU = 1;
+		NO = 2;
+	}
+	string id = 1;
+   Type type = 2;
+   repeated DependencyInfo input = 3;
+   map<string,string> args = 4;
+   ObjectInfo output = 5;
+   Preference perf = 6;
+}
+
+message UDFInfo {
+	string name = 1;
+	repeated ValType para_list = 2;  //   Float32, Float32
+	ValType return = 3;              //   Float32
+	string expression = 4;
+   //  float tmp = 0
+   //  for (int i=0; i<100 ; i++)
+   //     tmp += 4.1*$(0) + $(1) + 7.8 ;
+   //  fuc_name(tmp)
+   //  return tmp;
+}
+
+message PipelineInfo {
+	string id = 1;
+	repeated OperatorInfo workflow = 2;
+	repeated string pre_pipeline_id = 3;
+	bool codegen = 4;
+	bool debug = 5;
+	bool isGPU = 6;
+}
+
+message GraphInfo {
+	string id = 1;
+	repeated PipelineInfo pipeline_list = 2;
+	repeated UDFInfo udf = 3;
+}
+
+message Ret {
+	bool success = 1;
+	string info = 2;
+}
+
+service ShadowVMAPI {
+	rpc RunPipelineCMD (PipelineInfo) returns (Ret) {}
+}
+
+
+
+
+
+
+
